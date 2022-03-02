@@ -5,6 +5,12 @@ public class Robot : IRobot
     private int? _x;
     private int? _y;
     private Bearing? _direction;
+    private int sideLength;
+
+    public Robot(int sideLength)
+    {
+        this.sideLength = sideLength;
+    }
     private bool HasBearing => this.Direction != null;
 
     private bool IsValidState =>
@@ -12,8 +18,8 @@ public class Robot : IRobot
         && this.Y != null
         && this.HasBearing;
 
-    private static bool IsValidCoordinate(int? i) =>
-        i is >= 0 and <= 5;
+    private bool IsValidCoordinate(int? i) =>
+        i.HasValue && i.Value >= 0 && i.Value <= this.sideLength - 1;
     
     private int? X
     {
@@ -99,6 +105,11 @@ public class Robot : IRobot
     {
         if (!HasBearing && bearing == null)
             return ExecResult.DENIED;
+
+        if (!IsValidCoordinate(x) || !IsValidCoordinate(y) )
+        {
+            return ExecResult.DENIED;
+        }
         
         this.X = x;
         this.Y = y;
@@ -184,7 +195,7 @@ public class Robot : IRobot
     public ExecResult REPORT()
     {
         var report = this.ToString();
-        Console.WriteLine(this.ToString());
+        Console.WriteLine(report);
         return string.IsNullOrEmpty(report) ? ExecResult.DENIED : ExecResult.OK;
     }
 
