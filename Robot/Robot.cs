@@ -6,12 +6,13 @@ public class Robot : IRobot
     private int? _y;
     private Bearing? _direction;
     private int sideLength;
+    private HashSet<(int, int)> toAvoid = new ();
 
     public Robot(int sideLength)
     {
         this.sideLength = sideLength;
     }
-    private bool HasBearing => this.Direction != null;
+    private bool HasBearing => this.Direction.HasValue;
 
     private bool IsValidState =>
         this.X != null
@@ -59,6 +60,7 @@ public class Robot : IRobot
 
     public ExecResult Execute(string? command)
     {
+        // info : action actionArgs
         var info = command?.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
         
         if (info == null || info.Length == 0)
@@ -106,6 +108,11 @@ public class Robot : IRobot
         if (!HasBearing && bearing == null)
             return ExecResult.DENIED;
 
+        if (this.toAvoid.Contains((x, y)))
+        {
+            return ExecResult.DENIED;
+        }
+
         if (!IsValidCoordinate(x) || !IsValidCoordinate(y) )
         {
             return ExecResult.DENIED;
@@ -143,6 +150,15 @@ public class Robot : IRobot
         return ExecResult.OK;
     }
 
+    public ExecResult AVOID(int x, int y, Bearing? _)
+    {
+        if (!this.IsValidCoordinate(x) || !this.IsValidCoordinate(y))
+            return ExecResult.DENIED;
+        
+        this.toAvoid.Add((x, y));
+        return ExecResult.OK;
+    }
+    
     public ExecResult RIGHT()
     {
         if (!this.HasBearing)
@@ -172,6 +188,9 @@ public class Robot : IRobot
     {
         if (!this.IsValidState)
             return ExecResult.DENIED;
+        if (!this.CanMove(this.Direction.Value))
+            return ExecResult.DENIED;
+        
         switch (this.Direction)
         {
             case Bearing.WEST:
@@ -192,6 +211,26 @@ public class Robot : IRobot
         return ExecResult.OK;
     }
 
+    private bool CanMove(Bearing current)
+    {
+        if (!this.X.HasValue || !this.Y.HasValue)
+        {
+            return false;
+        }
+        switch (current)
+        {
+            case Bearing.WEST:
+                return !this.toAvoid.Contains((this.X.Value - 1, this.Y.Value));
+            case Bearing.NORTH:
+                return !this.toAvoid.Contains((this.X.Value, this.Y.Value + 1));
+            case Bearing.EAST:
+                return !this.toAvoid.Contains((this.X.Value + 1, this.Y.Value));
+            case Bearing.SOUTH:
+                return !this.toAvoid.Contains((this.X.Value, this.Y.Value - 1));
+            default:
+                throw new ArgumentOutOfRangeException(nameof(current), current, null);
+        }
+    }
     public ExecResult REPORT()
     {
         var report = this.ToString();
